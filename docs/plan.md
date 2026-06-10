@@ -295,7 +295,56 @@ npm run test:rls  # RLS-specific (requires Supabase connection)
 
 ## Execution Phases
 
-Each phase follows the approval workflow: describe → wait → implement → test → summarize → wait.
+Each phase follows the approval workflow: describe → wait → **git branch** → implement (uncommitted) → test → **wait for owner approval** → commit → push → summarize → wait.
+
+### Git Workflow (per phase)
+
+#### Step A — After phase approval, before writing code
+
+1. Create a feature branch from `main`:
+
+   ```text
+   phase{N}-{short-description}
+   ```
+
+   Example: `phase2-database-schema-seed`
+
+2. Implement the approved phase on that branch.
+
+3. Run tests locally.
+
+4. **Do not commit.** Leave all changes uncommitted so the owner can review the full diff in the IDE.
+
+5. Summarize changes and **wait for explicit owner approval**.
+
+#### Step B — After owner confirms they tested and approved
+
+6. Commit with:
+
+   ```text
+   Phase {N}: {Phase Title}
+   ```
+
+   Example: `Phase 2: Database Schema & Seed`
+
+7. Push the branch to GitHub (only when the owner explicitly requests it):
+
+   ```bash
+   git push -u origin phase{N}-{short-description}
+   ```
+
+| Phase | Branch | Commit message |
+|-------|--------|----------------|
+| 1 | `phase1-project-scaffolding` | `Phase 1: Project Scaffolding` |
+| 2 | `phase2-database-schema-seed` | `Phase 2: Database Schema & Seed` |
+| 3 | `phase3-authentication` | `Phase 3: Authentication` |
+| 4 | `phase4-audit-api` | `Phase 4: Audit API` |
+| 5 | `phase5-frontend` | `Phase 5: Frontend` |
+| 6 | `phase6-rls-tests` | `Phase 6: RLS Tests` |
+| 7 | `phase7-documentation` | `Phase 7: Documentation` |
+
+> Phase 1 was committed and pushed manually by the project owner.
+> **Never commit or push without explicit owner approval after testing.**
 
 ---
 
@@ -327,7 +376,9 @@ Each phase follows the approval workflow: describe → wait → implement → te
 - `supabase/seed.sql`
 - `scripts/seed.ts` (or `npm run db:seed` script)
 
-**Tests:** Verify seed data count and tenant distribution via script assertion.
+**Git:** Branch `phase2-database-schema-seed` → uncommitted changes → owner approval → commit `Phase 2: Database Schema & Seed` → push.
+
+**Tests:** Verify seed definition (offline) + optional live Supabase verification (`RUN_DB_TESTS=true`).
 
 ---
 
