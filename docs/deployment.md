@@ -70,15 +70,15 @@ Runs `db:migrate` then `db:seed`.
 # Apply schema (requires DATABASE_URL)
 npm run db:migrate
 
-# Insert seed data (requires SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY)
+# Insert seed data (requires DATABASE_URL)
 npm run db:seed
 ```
 
 | Script | Command | Requires | What it does |
 |--------|---------|----------|--------------|
-| Migrate | `npm run db:migrate` | `DATABASE_URL` | Applies `supabase/migrations/001_initial_schema.sql` via `scripts/apply-schema.ts` |
-| Seed | `npm run db:seed` | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Inserts 16 audit rows across 3 tenants via `scripts/seed.ts` |
-| Setup | `npm run db:setup` | All of the above | Runs migrate + seed |
+| Migrate | `npm run db:migrate` | `DATABASE_URL` | Applies all SQL files in `supabase/migrations/` |
+| Seed | `npm run db:seed` | `DATABASE_URL` | Inserts 16 audit rows across 3 tenants via `scripts/seed.ts` |
+| Setup | `npm run db:setup` | `DATABASE_URL` | Runs migrate + seed |
 
 **When to re-run:**
 
@@ -86,7 +86,7 @@ npm run db:seed
 - **Schema changed** — run `db:migrate`
 - **Seed data missing or wiped** — run `db:seed`
 
-> Migrations use `DATABASE_URL` (direct Postgres). Seeding uses the Supabase service-role client. Both are run from your machine or CI — not as part of `npm run build`.
+> Migrations, seeding, and bootstrap token insert use `DATABASE_URL` (direct Postgres). API runtime uses anon key + caller JWT (RLS).
 
 ---
 
@@ -114,13 +114,12 @@ Copy `.env.example` to `.env` and fill in:
 
 | Variable | Required | Used by | Description |
 |----------|----------|---------|-------------|
-| `SUPABASE_URL` | Yes | API, seed, tests | `https://<ref>.supabase.co` (no `/rest/v1/` suffix) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | API, seed, tests | Server-side DB access |
+| `SUPABASE_URL` | Yes | API, tests | `https://<ref>.supabase.co` (no `/rest/v1/` suffix) |
+| `SUPABASE_ANON_KEY` | Yes | API, RLS tests | Anon/public key — all API DB access uses caller JWT |
 | `JWT_SECRET` | Yes | API, auth, RLS tests | Must match Supabase JWT secret |
-| `DATABASE_URL` | For migrate | `db:migrate` | Postgres connection URI |
-| `SUPABASE_ANON_KEY` | Optional | `test:rls` | Anon key; falls back to service role |
+| `DATABASE_URL` | Yes | API bootstrap, migrate, seed | Postgres connection URI |
 
-For production hosting, set the same runtime variables (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`) in the platform's environment config. `DATABASE_URL` is only needed where you run migrations.
+For production hosting, set all four runtime variables. `DATABASE_URL` is required for bootstrap token insert (no JWT exists yet at insert time).
 
 ---
 
@@ -154,7 +153,7 @@ Mismatch causes token verification failures and broken RLS.
 
 ## Security Checklist
 
-- [ ] `SUPABASE_SERVICE_ROLE_KEY` is server-only (never exposed to the browser)
+- [ ] `DATABASE_URL` is server-only (never exposed to the browser)
 - [ ] `JWT_SECRET` matches Supabase JWT secret
 - [ ] `DATABASE_URL` is not exposed to client-side code
 - [ ] RLS is enabled on `audit_log` (applied by migration)

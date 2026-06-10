@@ -23,13 +23,14 @@ A single **Next.js 15** application (App Router) serves both the React frontend 
 │  │  Audit table │    │  POST /api/audit                 │  │
 │  │  + filters   │    │  GET  /api/audit                 │  │
 │  └──────────────┘    └──────────────┬───────────────────┘  │
-│                                     │ service-role client    │
+│                                     │ anon key + caller JWT │
+│                                     │ (pg for bootstrap insert)│
 └─────────────────────────────────────┼────────────────────────┘
                                       ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Supabase PostgreSQL                      │
 │  Tables: audit_log, issued_tokens                           │
-│  RLS: tenant_id = (auth.jwt() ->> 'tenant_id')            │
+│  RLS: audit_log by tenant_id; issued_tokens by jti        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -42,15 +43,17 @@ A single **Next.js 15** application (App Router) serves both the React frontend 
 | Auth API | `src/app/api/auth/bootstrap/route.ts` | Issue JWT, record in `issued_tokens` |
 | Audit API | `src/app/api/audit/route.ts` | Create and list audit entries (tenant-scoped) |
 | Auth lib | `src/lib/auth.ts`, `src/lib/jwt.ts`, `src/lib/token-store.ts` | JWT sign/verify, token lifecycle |
-| DB client | `src/lib/supabase.ts` | Service-role Supabase client (server-side) |
-| RLS testing | `src/lib/supabase-user.ts` | User-scoped client for RLS integration tests |
+| DB client | `src/lib/supabase-user.ts` | Anon key + caller JWT (RLS enforced) |
+| Admin / bootstrap | `src/lib/pg.ts` | Direct Postgres for bootstrap insert, seed, migrate |
 
 ## Design Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Framework | Next.js 15 App Router | Unified frontend + API in one deployable unit |
-| Server DB access | Service-role Supabase client | Full server-side control; tenant filter applied in route handlers |
+| API DB access | Anon key + caller JWT | RLS enforced on `audit_log` and `issued_tokens` |
+| Bootstrap token insert | Direct Postgres (`DATABASE_URL`) | Unauthenticated — no JWT exists yet at insert time |
+| Seed / migrate | Direct Postgres (`DATABASE_URL`) | Offline scripts only |
 | JWT library | `jose` (HS256) | Lightweight, works in Next.js and Jest |
 | JWT secret | `JWT_SECRET` env var | Must match Supabase project JWT secret for RLS |
 | Token tracking | `issued_tokens` table | Lifecycle only (`ACTIVE` / `EXPIRED`); identity stays in JWT claims |
@@ -68,8 +71,9 @@ A single **Next.js 15** application (App Router) serves both the React frontend 
 
 **Defense in depth:**
 
-- API routes filter by JWT `tenant_id` before querying
-- RLS policies block cross-tenant reads/inserts at the database level (verified in `tests/rls/`)
+- Audit API connects with anon key + caller JWT — RLS enforces tenant isolation at the database
+- API routes also filter by JWT `tenant_id` in query code (belt-and-suspenders)
+- RLS behavior verified in `tests/rls/` and live audit integration tests
 
 ## Related Docs
 

@@ -1,43 +1,38 @@
 import "./load-env";
-import { createServiceRoleClient } from "../src/lib/supabase";
+import { withPgClient } from "../src/lib/pg";
 import { SEED_ROWS } from "./seed-data";
 
 async function main(): Promise<void> {
-  const supabase = createServiceRoleClient();
-
-  const { count, error: countError } = await supabase
-    .from("audit_log")
-    .select("*", { count: "exact", head: true });
-
-  if (countError) {
-    throw new Error(
-      `audit_log table is not available (${countError.message}). Run npm run db:migrate first.`
+  await withPgClient(async (client) => {
+    const countResult = await client.query<{ count: string }>(
+      "SELECT COUNT(*)::text AS count FROM audit_log"
     );
-  }
+    const count = parseInt(countResult.rows[0]?.count ?? "0", 10);
 
-  if ((count ?? 0) >= SEED_ROWS.length) {
-    console.log(`Seed skipped: audit_log already has ${count} rows.`);
-    return;
-  }
+    if (count >= SEED_ROWS.length) {
+      console.log(`Seed skipped: audit_log already has ${count} rows.`);
+      return;
+    }
 
-  const { error: deleteError } = await supabase
-    .from("audit_log")
-    .delete()
-    .neq("id", "00000000-0000-0000-0000-000000000000");
+    await client.query("DELETE FROM audit_log");
 
-  if (deleteError) {
-    throw new Error(`Failed to clear audit_log: ${deleteError.message}`);
-  }
+    for (const row of SEED_ROWS) {
+      await client.query(
+        `INSERT INTO audit_log (tenant_id, user_id, action, resource, payload, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          row.tenant_id,
+          row.user_id,
+          row.action,
+          row.resource ?? null,
+          JSON.stringify(row.payload ?? {}),
+          row.created_at,
+        ]
+      );
+    }
 
-  const { error: insertError } = await supabase
-    .from("audit_log")
-    .insert(SEED_ROWS);
-
-  if (insertError) {
-    throw new Error(`Failed to seed audit_log: ${insertError.message}`);
-  }
-
-  console.log(`Seeded ${SEED_ROWS.length} audit_log rows.`);
+    console.log(`Seeded ${SEED_ROWS.length} audit_log rows.`);
+  });
 }
 
 main().catch((error: unknown) => {

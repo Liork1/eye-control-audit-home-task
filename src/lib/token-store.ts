@@ -1,4 +1,5 @@
-import { createServiceRoleClient } from "./supabase";
+import { withPgClient } from "./pg";
+import { createAuthenticatedClient } from "./supabase-user";
 
 export type TokenStatus = "ACTIVE" | "EXPIRED" | "REVOKED";
 
@@ -10,30 +11,32 @@ export interface IssuedTokenRecord {
   created_at: string;
 }
 
+/** Bootstrap only — inserts before caller has a JWT; uses direct Postgres. */
 export async function recordToken(
   jti: string,
   expiresAt: Date
 ): Promise<void> {
-  const supabase = createServiceRoleClient();
-  const { error } = await supabase.from("issued_tokens").insert({
-    token_jti: jti,
-    status: "ACTIVE",
-    expires_at: expiresAt.toISOString(),
-  });
+  await withPgClient(async (client) => {
+    const { rowCount } = await client.query(
+      `INSERT INTO issued_tokens (token_jti, status, expires_at)
+       VALUES ($1, 'ACTIVE', $2)`,
+      [jti, expiresAt.toISOString()]
+    );
 
-  if (error) {
-    throw new Error(`Failed to record issued token: ${error.message}`);
-  }
+    if ((rowCount ?? 0) < 1) {
+      throw new Error("Failed to record issued token");
+    }
+  });
 }
 
+/** RLS-scoped — caller can only read their own jti row. */
 export async function findTokenByJti(
-  jti: string
+  authorizationHeader: string
 ): Promise<IssuedTokenRecord | null> {
-  const supabase = createServiceRoleClient();
+  const supabase = createAuthenticatedClient(authorizationHeader);
   const { data, error } = await supabase
     .from("issued_tokens")
     .select("id, token_jti, status, expires_at, created_at")
-    .eq("token_jti", jti)
     .maybeSingle();
 
   if (error) {
@@ -43,12 +46,14 @@ export async function findTokenByJti(
   return data;
 }
 
-export async function markExpired(jti: string): Promise<void> {
-  const supabase = createServiceRoleClient();
+/** RLS-scoped — caller can only update their own jti row. */
+export async function markExpired(
+  authorizationHeader: string
+): Promise<void> {
+  const supabase = createAuthenticatedClient(authorizationHeader);
   const { error } = await supabase
     .from("issued_tokens")
-    .update({ status: "EXPIRED" })
-    .eq("token_jti", jti);
+    .update({ status: "EXPIRED" });
 
   if (error) {
     throw new Error(`Failed to mark token expired: ${error.message}`);

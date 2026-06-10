@@ -36,10 +36,9 @@ You should see audit log entries for tenant-a. Switch tenants by changing URL pa
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `SUPABASE_URL` | Yes | Supabase project base URL (no `/rest/v1/` suffix) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key for server-side DB access |
+| `SUPABASE_ANON_KEY` | Yes | Anon/public key — all API DB access uses caller JWT (RLS enforced) |
 | `JWT_SECRET` | Yes | Must match Supabase JWT secret (Project Settings → API) |
-| `DATABASE_URL` | For migrate | Postgres connection URI (`npm run db:migrate`) |
-| `SUPABASE_ANON_KEY` | Optional | Anon/public key (used by `npm run test:rls`) |
+| `DATABASE_URL` | Yes | Postgres URI — migrations, seed, and bootstrap token insert |
 
 > **Important:** `JWT_SECRET` must equal your Supabase project's JWT secret, or authentication and RLS will fail.
 

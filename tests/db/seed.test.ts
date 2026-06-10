@@ -1,5 +1,5 @@
 import "./load-env";
-import { createServiceRoleClient } from "@/lib/supabase";
+import { withPgClient } from "@/lib/pg";
 import { SEED_ROWS } from "../../scripts/seed-data";
 
 const REQUIRED_TENANTS = ["tenant-a", "tenant-b", "tenant-c"] as const;
@@ -19,24 +19,18 @@ describe("seed definition", () => {
   "seed in database (integration)",
   () => {
     it("has at least 14 rows across three tenants in Supabase", async () => {
-      const supabase = createServiceRoleClient();
-
-      const { data, error } = await supabase
-        .from("audit_log")
-        .select("tenant_id, action");
-
-      if (error) {
-        throw new Error(
-          `${error.message}. Run: npm run db:migrate && npm run db:seed`
+      const rows = await withPgClient(async (client) => {
+        const result = await client.query<{ tenant_id: string; action: string }>(
+          "SELECT tenant_id, action FROM audit_log"
         );
-      }
+        return result.rows;
+      });
 
-      expect(data?.length).toBeGreaterThanOrEqual(14);
+      expect(rows.length).toBeGreaterThanOrEqual(14);
 
       const tenantCounts = REQUIRED_TENANTS.reduce<Record<string, number>>(
         (acc, tenant) => {
-          acc[tenant] =
-            data?.filter((row) => row.tenant_id === tenant).length ?? 0;
+          acc[tenant] = rows.filter((row) => row.tenant_id === tenant).length;
           return acc;
         },
         {}
@@ -46,7 +40,7 @@ describe("seed definition", () => {
         expect(tenantCounts[tenant]).toBeGreaterThanOrEqual(1);
       }
 
-      const actions = new Set(data?.map((row) => row.action));
+      const actions = new Set(rows.map((row) => row.action));
       expect(actions.size).toBeGreaterThanOrEqual(5);
     });
   }

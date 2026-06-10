@@ -5,7 +5,10 @@ import {
   unauthorizedResponse,
   type AuthClaims,
 } from "@/lib/auth";
-import { createServiceRoleClient } from "@/lib/supabase";
+import {
+  createAuthenticatedClient,
+  SupabaseConfigError,
+} from "@/lib/supabase-user";
 
 interface CreateAuditBody {
   action?: string;
@@ -45,7 +48,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "action is required" }, { status: 400 });
   }
 
-  const supabase = createServiceRoleClient();
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader) {
+    return unauthorizedResponse(new AuthError("Missing Authorization header"));
+  }
+
+  let supabase;
+  try {
+    supabase = createAuthenticatedClient(authHeader);
+  } catch (error) {
+    if (error instanceof SupabaseConfigError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
+    throw error;
+  }
+
   const { data, error } = await supabase
     .from("audit_log")
     .insert({
@@ -78,7 +95,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const from = searchParams.get("from");
   const to = searchParams.get("to");
 
-  const supabase = createServiceRoleClient();
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader) {
+    return unauthorizedResponse(new AuthError("Missing Authorization header"));
+  }
+
+  let supabase;
+  try {
+    supabase = createAuthenticatedClient(authHeader);
+  } catch (error) {
+    if (error instanceof SupabaseConfigError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
+    throw error;
+  }
+
   let query = supabase
     .from("audit_log")
     .select("id, tenant_id, user_id, action, resource, payload, created_at")

@@ -16,7 +16,7 @@ Required values:
 
 ```env
 SUPABASE_URL=https://<ref>.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+SUPABASE_ANON_KEY=<anon-key>
 JWT_SECRET=<same as Supabase JWT secret>
 DATABASE_URL=postgresql://...
 ```

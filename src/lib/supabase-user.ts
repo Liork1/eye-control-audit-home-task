@@ -1,58 +1,42 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { SignJWT } from "jose";
+import { signToken } from "./jwt";
 
 function normalizeSupabaseUrl(url: string): string {
   return url.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
 }
 
+export class SupabaseConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SupabaseConfigError";
+  }
+}
+
 function getEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
+    throw new SupabaseConfigError(`Missing required environment variable: ${name}`);
   }
   return value;
 }
 
-function getJwtSecret(): Uint8Array {
-  return new TextEncoder().encode(getEnv("JWT_SECRET"));
-}
-
 /**
- * Signs a JWT for Supabase RLS evaluation (includes role=authenticated).
+ * Supabase client that forwards the caller's JWT — RLS policies apply.
+ * Requires SUPABASE_ANON_KEY (not service role).
  */
-export async function signRlsTestToken(
-  tenantId: string,
-  userId: string
-): Promise<string> {
-  return new SignJWT({
-    tenant_id: tenantId,
-    user_id: userId,
-    role: "authenticated",
-  })
-    .setProtectedHeader({ alg: "HS256" })
-    .setJti(crypto.randomUUID())
-    .setIssuedAt()
-    .setExpirationTime("1h")
-    .sign(getJwtSecret());
-}
-
-/**
- * Supabase client scoped to a tenant JWT — RLS policies apply.
- */
-export async function createUserScopedClient(
-  tenantId: string,
-  userId: string
-): Promise<SupabaseClient> {
+export function createAuthenticatedClient(
+  authorizationHeader: string
+): SupabaseClient {
   const url = normalizeSupabaseUrl(getEnv("SUPABASE_URL"));
-  // Prefer anon key; service role apikey also works when Authorization carries the tenant JWT.
-  const apiKey =
-    process.env.SUPABASE_ANON_KEY ?? getEnv("SUPABASE_SERVICE_ROLE_KEY");
-  const token = await signRlsTestToken(tenantId, userId);
+  const apiKey = getEnv("SUPABASE_ANON_KEY");
+  const authorization = authorizationHeader.startsWith("Bearer ")
+    ? authorizationHeader
+    : `Bearer ${authorizationHeader}`;
 
   return createClient(url, apiKey, {
     global: {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: authorization,
       },
     },
     auth: {
@@ -60,4 +44,18 @@ export async function createUserScopedClient(
       persistSession: false,
     },
   });
+}
+
+/** Test helper — signs a tenant JWT and returns an RLS-scoped client. */
+export async function createUserScopedClient(
+  tenantId: string,
+  userId: string
+): Promise<SupabaseClient> {
+  const token = await signToken({
+    tenant_id: tenantId,
+    user_id: userId,
+    jti: crypto.randomUUID(),
+  });
+
+  return createAuthenticatedClient(`Bearer ${token}`);
 }
