@@ -43,8 +43,8 @@ Open [http://localhost:3000/?tenant_id=tenant-a&user_id=user-1](http://localhost
 
 - [x] Phase 1: Project scaffolding
 - [x] Phase 2: Database schema & seed
-- [ ] Phase 3: Authentication (in review)
-- [ ] Phase 4: Audit API
+- [x] Phase 3: Authentication
+- [ ] Phase 4: Audit API (in review)
 - [ ] Phase 5: Frontend
 - [ ] Phase 6: RLS tests
 - [ ] Phase 7: Documentation
