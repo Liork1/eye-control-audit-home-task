@@ -287,9 +287,12 @@ Authenticate as `tenant-a` / `user-1`, then attempt:
 ### Running Tests
 
 ```bash
-npm test          # all tests
-npm run test:rls  # RLS-specific (requires Supabase connection)
+npm test                        # offline-safe tests (default)
+RUN_DB_TESTS=true npm test      # include live Supabase seed verification
+npm run test:rls                # RLS-specific (requires Supabase connection)
 ```
+
+See [`docs/testing.md`](testing.md) for details on `RUN_DB_TESTS` and test prerequisites.
 
 ---
 
