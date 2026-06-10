@@ -439,10 +439,13 @@ Each phase follows the approval workflow: describe → wait → **git branch** �
 
 **What:** Direct Supabase client tests proving DB-level tenant isolation.
 
+**Approach:** User-scoped client with tenant JWT (`role: authenticated`) + `SUPABASE_ANON_KEY`. Service-role bypasses RLS; anon key enforces it.
+
 **Files created:**
+- `src/lib/supabase-user.ts`
 - `tests/rls/tenant-isolation.test.ts`
 
-**Tests:** Positive and negative RLS cases.
+**Tests:** Positive (tenant-a reads tenant-a) and negative (tenant-a cannot read tenant-b). Requires `RUN_DB_TESTS=true`.
 
 ---
 

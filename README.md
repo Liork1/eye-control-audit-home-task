@@ -18,6 +18,7 @@ Open [http://localhost:3000/?tenant_id=tenant-a&user_id=user-1](http://localhost
 |----------|-------------|
 | `SUPABASE_URL` | Supabase project base URL (no `/rest/v1/` suffix) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key for server-side DB access |
+| `SUPABASE_ANON_KEY` | Anon/public key (optional; used for `npm run test:rls`) |
 | `JWT_SECRET` | Must match Supabase JWT secret (Project Settings → API) |
 | `DATABASE_URL` | Postgres connection URI (required for `db:migrate`) |
 
@@ -45,6 +46,6 @@ Open [http://localhost:3000/?tenant_id=tenant-a&user_id=user-1](http://localhost
 - [x] Phase 2: Database schema & seed
 - [x] Phase 3: Authentication
 - [x] Phase 4: Audit API
-- [ ] Phase 5: Frontend (in review)
-- [ ] Phase 6: RLS tests
+- [x] Phase 5: Frontend
+- [ ] Phase 6: RLS tests (in review)
 - [ ] Phase 7: Documentation
