@@ -9,6 +9,7 @@ This project uses [Jest](https://jestjs.io/) for unit, integration, and database
 | `npm test` | All tests that do **not** require a live Supabase connection |
 | `RUN_DB_TESTS=true npm test` | All tests, including live Supabase integration tests |
 | `npm run test:rls` | RLS tenant-isolation tests only (requires Supabase) |
+| `npm run test:e2e` | End-to-end tenant isolation flow (requires Supabase) |
 
 ## `RUN_DB_TESTS`
 
@@ -62,6 +63,21 @@ Set `RUN_DB_TESTS=true` when you want to verify behavior against the actual data
 | Seed definition (offline) | 16+ rows, 3 tenants, 5+ actions in code |
 | Seed integration (live) | Rows exist in Supabase `audit_log` |
 
+### E2E (`tests/e2e/`)
+
+End-to-end tenant isolation through the full API flow (bootstrap → list → bypass → POST):
+
+| Test | What it verifies |
+|------|------------------|
+| Per-tenant list | Each of tenant-a/b/c sees only its own rows |
+| Disjoint datasets | No cross-tenant leakage between tenants |
+| Query bypass | `?tenant_id=tenant-b` ignored for tenant-a token |
+| Header bypass | `X-Tenant-Id` ignored for tenant-b token |
+| POST scoping | Body `tenant_id` ignored; JWT tenant used |
+| Date + tenant | Date filter does not narrow to logged-in user |
+
+Run with: `RUN_DB_TESTS=true npm run test:e2e`
+
 ### RLS (`tests/rls/`)
 
 Direct Supabase client tests using user-scoped JWT (`src/lib/supabase-user.ts`):
@@ -100,6 +116,7 @@ tests/
 ├── auth/           # JWT + bootstrap + token lifecycle
 ├── audit/          # API create/list + tenant isolation (mandatory)
 ├── db/             # Seed definition + optional Supabase integration
+├── e2e/            # End-to-end tenant isolation (npm run test:e2e)
 ├── rls/            # Row Level Security tenant isolation
 └── smoke/          # Build and project health checks
 ```

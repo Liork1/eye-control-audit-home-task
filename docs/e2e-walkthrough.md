@@ -118,13 +118,25 @@ curl -s "http://localhost:3000/api/audit?tenant_id=tenant-b" \
 
 **Expected:** Only `tenant-a` appears — the query param is ignored.
 
-Run the full integration test suite:
+Run the automated e2e tenant isolation suite:
 
 ```bash
-RUN_DB_TESTS=true npm test -- --testPathPattern=tests/audit
+RUN_DB_TESTS=true npm run test:e2e
 ```
 
-Tests cover query, header, and body bypass attempts.
+**Expected:** 6 tests pass, covering:
+
+- Each tenant (a/b/c) sees only its own rows after bootstrap
+- Cross-tenant datasets are disjoint
+- Query and header bypass attempts are blocked
+- POST uses JWT tenant, not body `tenant_id`
+- Date filters scope by time, not by logged-in user
+
+Also run API-level bypass tests:
+
+```bash
+RUN_DB_TESTS=true npm test -- --testPathPattern=tests/audit/tenant-isolation
+```
 
 ---
 
@@ -149,6 +161,7 @@ RUN_DB_TESTS=true npm run test:rls
 ```bash
 npm test                                    # offline tests
 RUN_DB_TESTS=true npm test                  # + live DB integration
+RUN_DB_TESTS=true npm run test:e2e          # + e2e tenant isolation
 RUN_DB_TESTS=true npm run test:rls          # + RLS tests
 npm run build                               # production build
 ```

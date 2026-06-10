@@ -55,6 +55,7 @@ You should see audit log entries for tenant-a. Switch tenants by changing URL pa
 | `npm test` | Run Jest tests (offline by default) |
 | `RUN_DB_TESTS=true npm test` | Include live Supabase integration tests |
 | `npm run test:rls` | Run RLS tenant-isolation tests |
+| `npm run test:e2e` | Run e2e tenant-isolation tests |
 
 ## API Examples
 

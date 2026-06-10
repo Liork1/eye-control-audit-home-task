@@ -10,6 +10,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:rls": "jest --testPathPattern=tests/rls",
+    "test:e2e": "jest --testPathPattern=tests/e2e",
     "db:migrate": "tsx scripts/apply-schema.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:setup": "npm run db:migrate && npm run db:seed"
