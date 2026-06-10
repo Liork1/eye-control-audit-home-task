@@ -1,6 +1,6 @@
 import "./load-env";
+import { withPgClient } from "@/lib/pg";
 import { createUserScopedClient } from "@/lib/supabase-user";
-import { createServiceRoleClient } from "@/lib/supabase";
 
 const RUN_DB_TESTS = process.env.RUN_DB_TESTS === "true";
 
@@ -8,17 +8,15 @@ const RUN_DB_TESTS = process.env.RUN_DB_TESTS === "true";
   "RLS tenant isolation",
   () => {
     beforeAll(async () => {
-      const admin = createServiceRoleClient();
-      const { count: tenantBCount, error } = await admin
-        .from("audit_log")
-        .select("*", { count: "exact", head: true })
-        .eq("tenant_id", "tenant-b");
+      const tenantBCount = await withPgClient(async (client) => {
+        const result = await client.query<{ count: string }>(
+          "SELECT COUNT(*)::text AS count FROM audit_log WHERE tenant_id = $1",
+          ["tenant-b"]
+        );
+        return parseInt(result.rows[0]?.count ?? "0", 10);
+      });
 
-      if (error) {
-        throw new Error(`Seed check failed: ${error.message}`);
-      }
-
-      if ((tenantBCount ?? 0) < 1) {
+      if (tenantBCount < 1) {
         throw new Error(
           "Expected tenant-b seed data. Run: npm run db:seed"
         );

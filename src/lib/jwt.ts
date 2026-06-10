@@ -40,6 +40,7 @@ export async function signToken(claims: TokenClaims): Promise<string> {
   return new SignJWT({
     tenant_id: claims.tenant_id,
     user_id: claims.user_id,
+    role: "authenticated",
   })
     .setProtectedHeader({ alg: "HS256" })
     .setJti(claims.jti)

@@ -32,6 +32,7 @@ export async function authenticateRequest(
   authorizationHeader: string | null
 ): Promise<AuthClaims> {
   const token = parseBearerToken(authorizationHeader);
+  const bearerHeader = authorizationHeader as string;
 
   let claims: AuthClaims;
   try {
@@ -40,7 +41,7 @@ export async function authenticateRequest(
     throw new AuthError("Invalid or expired token");
   }
 
-  const record = await findTokenByJti(claims.jti);
+  const record = await findTokenByJti(bearerHeader);
   if (!record) {
     throw new AuthError("Token is not recognized");
   }
@@ -50,7 +51,7 @@ export async function authenticateRequest(
   }
 
   if (new Date(record.expires_at).getTime() <= Date.now()) {
-    await markExpired(claims.jti);
+    await markExpired(bearerHeader);
     throw new AuthError("Token has expired");
   }
 

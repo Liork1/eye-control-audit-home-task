@@ -67,7 +67,7 @@ describe("POST /api/auth/bootstrap", () => {
       expect(claims.user_id).toBe("user-1");
       expect(claims.jti).toBeTruthy();
 
-      const record = await findTokenByJti(claims.jti);
+      const record = await findTokenByJti(`Bearer ${body.token}`);
       expect(record).not.toBeNull();
       expect(record?.status).toBe("ACTIVE");
     });

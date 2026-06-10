@@ -110,9 +110,8 @@ tests/
 |----------|--------------|-------------|
 | `RUN_DB_TESTS` | Live integration | Set to `true` to enable Supabase tests |
 | `SUPABASE_URL` | Live DB / RLS | Supabase project base URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Live DB / RLS | Service role key |
 | `JWT_SECRET` | Auth + RLS tests | Must match Supabase JWT secret |
-| `SUPABASE_ANON_KEY` | RLS tests (optional) | Falls back to service role key |
+| `SUPABASE_ANON_KEY` | Audit API, RLS tests | Required — anon key + JWT enforces RLS |
 | `DATABASE_URL` | `db:migrate` only | Postgres URI for schema migration |
 
 Test files load `.env` via `tests/*/load-env.ts` before importing Supabase clients.

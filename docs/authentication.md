@@ -33,6 +33,7 @@ Subsequent API calls: Authorization: Bearer <jwt>
 | `tenant_id` | Tenant the user belongs to |
 | `user_id` | User identifier within the tenant |
 | `jti` | Unique token ID for lifecycle tracking |
+| `role` | `authenticated` — required for Supabase RLS evaluation |
 | `iat` / `exp` | Issued-at and expiration (24 hours) |
 
 Example decoded payload:
@@ -61,10 +62,12 @@ On each protected request, `requireAuth()`:
 
 1. Extracts `Bearer` token from `Authorization` header
 2. Verifies JWT signature and expiry (`jose`)
-3. Looks up `token_jti` in `issued_tokens`
+3. Looks up `token_jti` in `issued_tokens` via anon key + caller JWT (RLS: own `jti` only)
 4. Confirms `status === ACTIVE`
-5. Marks token `EXPIRED` if past `expires_at`
+5. Marks token `EXPIRED` if past `expires_at` (RLS-scoped update)
 6. Returns `{ tenant_id, user_id, jti }` claims
+
+Bootstrap `INSERT` into `issued_tokens` uses direct Postgres (`DATABASE_URL`) because no JWT exists yet.
 
 ## Protected Route Usage
 
@@ -88,9 +91,9 @@ This alignment is required for:
 - Application JWT signing/verification
 - Supabase RLS policies reading `auth.jwt() ->> 'tenant_id'`
 
-## RLS Test Tokens
+## RLS-Scoped API Access
 
-RLS integration tests (`src/lib/supabase-user.ts`) sign tokens with an additional `role: authenticated` claim so Supabase treats the request as an authenticated user when evaluating RLS policies. Application tokens do not include this claim because the API uses the service-role client.
+Protected audit routes use `createAuthenticatedClient()` (`src/lib/supabase-user.ts`): the anon key plus the caller's `Authorization: Bearer` JWT. Supabase evaluates RLS on every audit read/write. Bootstrap tokens include `role: authenticated` for this to work.
 
 ## Related Docs
 

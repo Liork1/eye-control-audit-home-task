@@ -33,7 +33,7 @@ PostgreSQL hosted on Supabase with two tables: `audit_log` (tenant-scoped audit 
 | `expires_at` | `TIMESTAMPTZ` | Token expiration |
 | `created_at` | `TIMESTAMPTZ` | When token was issued |
 
-No RLS on `issued_tokens` — accessed only via service-role key on the server.
+RLS enabled on `issued_tokens`. Token lookup/update uses anon key + caller JWT (`jti` claim). Bootstrap insert uses direct Postgres.
 
 ## Row Level Security
 
@@ -51,9 +51,26 @@ CREATE POLICY audit_log_insert ON audit_log
     WITH CHECK (tenant_id = (auth.jwt() ->> 'tenant_id'));
 ```
 
+### `issued_tokens` (Phase B)
+
+```sql
+ALTER TABLE issued_tokens ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY issued_tokens_select ON issued_tokens
+    FOR SELECT
+    USING (token_jti = (auth.jwt() ->> 'jti'));
+
+CREATE POLICY issued_tokens_update ON issued_tokens
+    FOR UPDATE
+    USING (token_jti = (auth.jwt() ->> 'jti'))
+    WITH CHECK (token_jti = (auth.jwt() ->> 'jti'));
+```
+
+Bootstrap `INSERT` bypasses RLS via direct Postgres (`DATABASE_URL`).
+
 **How it works:** When a request includes `Authorization: Bearer <jwt>`, Supabase evaluates `auth.jwt()` against the token. The `tenant_id` claim must match the row's `tenant_id`.
 
-**API note:** Server routes use the service-role client, which bypasses RLS. Tenant filtering is applied in application code (`eq("tenant_id", claims.tenant_id)`). RLS is verified independently in `tests/rls/`.
+**API note:** All runtime DB access uses the anon key with the caller's JWT — RLS enforces tenant isolation on `audit_log` and `jti` scoping on `issued_tokens`. Bootstrap token insert is the one exception (direct Postgres via `DATABASE_URL`).
 
 ## Seed Data
 
@@ -73,14 +90,14 @@ Rows span multiple timestamps and include varied `resource` and `payload` values
 # Apply migration (requires DATABASE_URL)
 npm run db:migrate
 
-# Seed audit data (requires SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY)
+# Seed audit data (requires DATABASE_URL)
 npm run db:seed
 
 # Both
 npm run db:setup
 ```
 
-Migration file: `supabase/migrations/001_initial_schema.sql`
+Migration files: `supabase/migrations/001_initial_schema.sql`, `002_issued_tokens_rls.sql`
 
 Seed reference SQL: `supabase/seed.sql`  
 Seed script: `scripts/seed.ts` + `scripts/seed-data.ts`
@@ -89,9 +106,9 @@ Seed script: `scripts/seed.ts` + `scripts/seed-data.ts`
 
 | Variable | Used by | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `db:migrate` | Direct Postgres connection URI |
-| `SUPABASE_URL` | `db:seed`, API, tests | Supabase project base URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | `db:seed`, API | Server-side DB access |
+| `DATABASE_URL` | `db:migrate`, `db:seed`, bootstrap | Direct Postgres connection URI |
+| `SUPABASE_URL` | API, tests | Supabase project base URL |
+| `SUPABASE_ANON_KEY` | API, tests | Anon key + caller JWT (RLS) |
 | `JWT_SECRET` | JWT signing, RLS tests | Must match Supabase JWT secret |
 
 ## Related Docs
