@@ -173,7 +173,7 @@ user_id    ←  JWT claim only
 
 ### Enforcement Points
 
-1. **API middleware/helper** (`lib/auth.ts`) — extracts and validates JWT, returns `{ tenant_id, user_id }`.
+1. **API route auth helper** (`lib/auth.ts`) — each protected handler calls `requireAuth(request)` and uses JWT claims `{ tenant_id, user_id }`.
 2. **API route handlers** — use claims for all DB queries; never merge client-supplied tenant.
 3. **Supabase RLS** — second line of defense at the database level.
 
@@ -387,15 +387,18 @@ Each phase follows the approval workflow: describe → wait → **git branch** �
 
 ### Phase 3: Authentication
 
-**What:** JWT bootstrap endpoint, token tracking, validation middleware.
+**What:** JWT bootstrap endpoint, token tracking, and shared auth helper for route handlers.
+
+**Next.js pattern:** Protected API routes call `requireAuth(request)` at the top of each handler (not a global middleware wrapper). Returns `unauthorizedResponse()` on `AuthError`.
 
 **Files created:**
 - `src/app/api/auth/bootstrap/route.ts`
 - `src/lib/jwt.ts`
 - `src/lib/token-store.ts`
+- `tests/auth/auth.test.ts`
 
 **Files modified:**
-- `src/lib/auth.ts` — full implementation
+- `src/lib/auth.ts` — `authenticateRequest()`, `requireAuth()`, `unauthorizedResponse()`
 
 **Tests:**
 - Bootstrap returns token with correct claims

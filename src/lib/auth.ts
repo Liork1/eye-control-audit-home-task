@@ -1,16 +1,68 @@
-export interface AuthClaims {
-  tenant_id: string;
-  user_id: string;
-  jti: string;
+import { NextRequest, NextResponse } from "next/server";
+import { verifyToken, type TokenClaims } from "./jwt";
+import { findTokenByJti, markExpired } from "./token-store";
+
+export type AuthClaims = TokenClaims;
+
+export class AuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AuthError";
+  }
+}
+
+function parseBearerToken(authorizationHeader: string | null): string {
+  if (!authorizationHeader) {
+    throw new AuthError("Missing Authorization header");
+  }
+
+  const [scheme, token] = authorizationHeader.split(" ");
+  if (scheme !== "Bearer" || !token) {
+    throw new AuthError("Authorization header must use Bearer scheme");
+  }
+
+  return token;
 }
 
 /**
- * Validates the Authorization header and returns JWT claims.
- * Implementation will be completed in Phase 3 (Authentication).
+ * Validates JWT signature, expiry, and issued_tokens lifecycle.
+ * Call from protected route handlers via requireAuth().
  */
 export async function authenticateRequest(
   authorizationHeader: string | null
 ): Promise<AuthClaims> {
-  void authorizationHeader;
-  throw new Error("authenticateRequest is not implemented yet");
+  const token = parseBearerToken(authorizationHeader);
+
+  let claims: AuthClaims;
+  try {
+    claims = await verifyToken(token);
+  } catch {
+    throw new AuthError("Invalid or expired token");
+  }
+
+  const record = await findTokenByJti(claims.jti);
+  if (!record) {
+    throw new AuthError("Token is not recognized");
+  }
+
+  if (record.status !== "ACTIVE") {
+    throw new AuthError("Token is not active");
+  }
+
+  if (new Date(record.expires_at).getTime() <= Date.now()) {
+    await markExpired(claims.jti);
+    throw new AuthError("Token has expired");
+  }
+
+  return claims;
+}
+
+/** Next.js route helper — extract and validate auth from the incoming request. */
+export async function requireAuth(request: NextRequest): Promise<AuthClaims> {
+  return authenticateRequest(request.headers.get("authorization"));
+}
+
+/** Standard 401 response for protected API routes. */
+export function unauthorizedResponse(error: AuthError): NextResponse {
+  return NextResponse.json({ error: error.message }, { status: 401 });
 }
