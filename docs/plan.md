@@ -454,16 +454,16 @@ Each phase follows the approval workflow: describe → wait → **git branch** �
 **What:** Complete documentation set and 5-minute startup README.
 
 **Files created:**
-- `docs/architecture.md`
-- `docs/authentication.md`
-- `docs/database.md`
-- `docs/api.md`
-- `docs/testing.md`
-- `docs/deployment.md`
-- `docs/e2e-walkthrough.md`
+- `docs/architecture.md` — system design, security model, component map
+- `docs/authentication.md` — JWT bootstrap, claims, token lifecycle
+- `docs/database.md` — schema, RLS policies, seed data, setup commands
+- `docs/api.md` — endpoint reference with curl examples
+- `docs/deployment.md` — production deploy checklist
+- `docs/e2e-walkthrough.md` — step-by-step verification guide
 
 **Files modified:**
-- `README.md` — full quickstart
+- `docs/testing.md` — expanded with auth, audit, and RLS suite details
+- `README.md` — full quickstart, API examples, doc index
 
 **Tests:** Follow README from scratch to verify < 5 min startup.
 
