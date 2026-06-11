@@ -4,7 +4,29 @@ Multi-tenant audit log service and viewer built with Next.js, Supabase, and JWT 
 
 ## Quick Start (< 5 minutes)
 
-**Prerequisites:** Node.js 18+, a Supabase project with credentials ready.
+**Prerequisites:** Node.js 18+
+
+### Option A — Local Docker (no Supabase account)
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Start local database stack
+cp docker/.env.example docker/.env
+npm run db:up
+
+# 3. Configure environment
+node docker/generate-anon-key.mjs   # copy output
+cp .env.local.example .env          # paste anon key; match JWT_SECRET to docker/.env
+
+# 4. Start the app
+npm run dev
+```
+
+See [docs/local-database.md](docs/local-database.md) for full Docker setup.
+
+### Option B — Hosted Supabase
 
 ```bash
 # 1. Install dependencies
@@ -52,6 +74,10 @@ You should see audit log entries for tenant-a. Switch tenants by changing URL pa
 | `npm run db:migrate` | Apply database schema (requires `DATABASE_URL`) |
 | `npm run db:seed` | Seed audit log data via service-role client |
 | `npm run db:setup` | Run migrate + seed |
+| `npm run db:up` | Start local Docker database stack (detached) |
+| `npm run db:down` | Stop local Docker stack (keeps data) |
+| `npm run db:logs` | Tail Docker stack logs |
+| `npm run db:reset` | Wipe volume and re-init local database |
 | `npm test` | Run Jest tests (offline by default) |
 | `RUN_DB_TESTS=true npm test` | Include live Supabase integration tests |
 | `npm run test:rls` | Run RLS tenant-isolation tests |
@@ -111,6 +137,7 @@ See [docs/testing.md](docs/testing.md) for details on `RUN_DB_TESTS` and test la
 | [docs/api.md](docs/api.md) | API reference with examples |
 | [docs/testing.md](docs/testing.md) | Test commands and CI guidance |
 | [docs/deployment.md](docs/deployment.md) | Production deployment |
+| [docs/local-database.md](docs/local-database.md) | Local Docker database setup |
 | [docs/e2e-walkthrough.md](docs/e2e-walkthrough.md) | Step-by-step verification guide |
 
 ## Project Status
