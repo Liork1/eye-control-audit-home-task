@@ -13,7 +13,11 @@
     "test:e2e": "jest --testPathPattern=tests/e2e",
     "db:migrate": "tsx scripts/apply-schema.ts",
     "db:seed": "tsx scripts/seed.ts",
-    "db:setup": "npm run db:migrate && npm run db:seed"
+    "db:setup": "npm run db:migrate && npm run db:seed",
+    "db:up": "docker compose --env-file docker/.env up -d",
+    "db:down": "docker compose --env-file docker/.env down",
+    "db:logs": "docker compose --env-file docker/.env logs -f",
+    "db:reset": "docker compose --env-file docker/.env down -v && docker compose --env-file docker/.env up -d"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.8",

@@ -1,4 +1,5 @@
 import { Client } from "pg";
+import { pgSslOption } from "./pg-ssl";
 
 export class PgConfigError extends Error {
   constructor(message: string) {
@@ -19,9 +20,10 @@ function getDatabaseUrl(): string {
 export async function withPgClient<T>(
   fn: (client: Client) => Promise<T>
 ): Promise<T> {
+  const connectionString = getDatabaseUrl();
   const client = new Client({
-    connectionString: getDatabaseUrl(),
-    ssl: { rejectUnauthorized: false },
+    connectionString,
+    ssl: pgSslOption(connectionString),
   });
 
   await client.connect();

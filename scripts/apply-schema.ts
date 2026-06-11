@@ -2,6 +2,7 @@ import "./load-env";
 import { readdirSync, readFileSync } from "fs";
 import { resolve } from "path";
 import { Client } from "pg";
+import { pgSslOption } from "../src/lib/pg-ssl";
 
 const MIGRATIONS_DIR = resolve(process.cwd(), "supabase/migrations");
 
@@ -27,7 +28,7 @@ async function main(): Promise<void> {
 
   const client = new Client({
     connectionString: databaseUrl,
-    ssl: { rejectUnauthorized: false },
+    ssl: pgSslOption(databaseUrl),
   });
 
   await client.connect();
