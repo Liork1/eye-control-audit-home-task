@@ -26,6 +26,22 @@ npm run dev
 
 See [docs/local-database.md](docs/local-database.md) for full Docker setup.
 
+#### Query the local database (Docker Desktop)
+
+With the stack running (`npm run db:up`), open **Docker Desktop → Containers → `db` container → Exec**, then start `psql`:
+
+```bash
+psql -U audit_admin -d audit_log_db
+```
+
+Useful commands inside `psql`:
+
+```sql
+\dt                      -- list tables
+SELECT * FROM audit_log; -- view audit logs
+\d audit_log             -- describe the table structure
+```
+
 ### Option B — Hosted Supabase
 
 ```bash
